@@ -1,9 +1,13 @@
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.TitledBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
@@ -90,8 +94,11 @@ public class HotelManager implements ActionListener {
 
     private JTextArea custSearchOut = new JTextArea();
     private JTextArea staffSearchOut = new JTextArea();
+    private JTextArea roomSearchOut = new JTextArea();
 
     private Border blackline = BorderFactory.createLineBorder(Color.black);
+
+    private JComboBox roomPageBox = new JComboBox();
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
     private Date date = new Date();
@@ -112,7 +119,7 @@ public class HotelManager implements ActionListener {
 
 
         nowPanel.setBorder(new TitledBorder("객실 예약 현황　　　　　　　　　　　　　　" + now_date));
-        joinPanel.setLayout(new GridLayout(3, 1));
+        joinPanel.setLayout(new GridLayout(1, 1));
         joinPanel.setBorder(new TitledBorder("등록 및 조회"));
 
         //menu
@@ -141,7 +148,7 @@ public class HotelManager implements ActionListener {
         }
         //콤보박스에 디비 받아서 룸들 더함.
         try {
-            addRoomsToBOX();
+            addRoomsToBOX(roomBox);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -149,36 +156,62 @@ public class HotelManager implements ActionListener {
         //joinPanel
         //joinPanel.add(joinPane);
         //test 용으로 각종 엘레멘트 등록해봄.
-        JPanel testcust = new JPanel(new GridLayout(2, 6));
-        joinPanel.add(testcust);
-        testcust.add(custSearchLabel);
-        testcust.add(custSearchInput);
-        testcust.add(custSearchButton);
+        JPanel custPage = new JPanel(new GridLayout(1, 2));
+        JPanel custInputPage = new JPanel(new GridLayout(2, 2));
+        joinPanel.add(joinPane);
+        custInputPage.add(custSearchLabel);
+        custInputPage.add(custSearchInput);
+        custInputPage.add(custSearchButton);
         custSearchButton.addActionListener(this);
-        testcust.add(custJoin);
+        custInputPage.add(custJoin);
         custJoin.addActionListener(this);
-
-        JPanel teststaff = new JPanel(new GridLayout(2, 6));
-        teststaff.add(staffSearchLabel);
-        teststaff.add(staffSearchInput);
-        teststaff.add(staffSearchButton);
-        staffSearchButton.addActionListener(this);
-        teststaff.add(staffJoin);
-        staffJoin.addActionListener(this);
-        joinPanel.add(teststaff);
-
-        JPanel testOut = new JPanel(new GridLayout(1, 2));
+        custPage.add(custInputPage);
+        custPage.add(custSearchOut);
         custSearchOut.setEditable(false);
-        testOut.add(custSearchOut);
-        testOut.add(staffSearchOut);
-        joinPanel.add(testOut);
+
+        //객실조회
+        try {
+            addRoomsToBOX(roomPageBox);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        JPanel roomPage = new JPanel(new GridLayout(1, 2));
+        JPanel roomBoxPage = new JPanel(new GridLayout(2, 2));
+        JLabel roomPageLabel = new JLabel("객실");
+        roomBoxPage.add(roomPageLabel);
+        roomBoxPage.add(roomPageBox);
+        roomPageBox.addActionListener(this);
+        roomPage.add(roomBoxPage);
+        roomSearchOut.setEditable(false);
+        roomPage.add(roomSearchOut);
+
+
+        JPanel staffPage = new JPanel(new GridLayout(1, 2));
+        JPanel staffInputPage = new JPanel(new GridLayout(2, 2));
+        staffInputPage.add(staffSearchLabel);
+        staffInputPage.add(staffSearchInput);
+        staffInputPage.add(staffSearchButton);
+        staffSearchButton.addActionListener(this);
+        staffInputPage.add(staffJoin);
+        staffJoin.addActionListener(this);
+        staffPage.add(staffInputPage);
+        staffPage.add(staffSearchOut);
+        staffSearchOut.setEditable(false);
+
+        joinPane.add("고객",custPage);
+        joinPane.add("객실", roomPage);
+        joinPane.add("직원",staffPage);
+
+
+
 
         JPanel mainTextPanel = new JPanel(new GridLayout(2, 1));
         mainText.setFont(new Font("맑은 고딕", 1, 24));
         mainText.setHorizontalAlignment(SwingConstants.CENTER);
         JTextArea help = new JTextArea();
         help.setEditable(false);
-        help.setText("설명:\n과제 스펙 이외에 예외사항은 별도 예외처리안함.");
+        help.setText("설명:\n과제 스펙 이외에 예외사항은 별도 예외처리안함.\n" +
+                "텍스트 파일은 유니코드인 걸 사용하시오.(한글전용 인코딩 X)");
         mainTextPanel.add(mainText);
         mainTextPanel.add(help);
         rowPanel.add(mainTextPanel);
@@ -225,10 +258,97 @@ public class HotelManager implements ActionListener {
         staffJoinPanel.add(staffJoinCancelButton);
         staffJoinJoinButton.addActionListener(this);
         staffJoinCancelButton.addActionListener(this);
+        fileMenuItem.addActionListener(new FileOpen());
 
         staffJoinFrame.add(staffJoinPanel);
         staffJoinFrame.setSize(300,400);
         staffJoinFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }
+    class FileOpen implements ActionListener {
+        JFileChooser chooser;
+
+        FileOpen() {
+            chooser = new JFileChooser();
+        }
+
+        public void actionPerformed(ActionEvent e) {
+            FileNameExtensionFilter filter = new FileNameExtensionFilter("txt","txt");
+            chooser.setFileFilter(filter);
+
+            int ret = chooser.showOpenDialog(null);
+            if(ret != JFileChooser.APPROVE_OPTION) {
+                JOptionPane.showMessageDialog(null, "취소함","경고", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            String filePath = chooser.getSelectedFile().getPath();
+
+            try{
+                insertTXTinDB(filePath);
+            } catch (SQLException se) {
+                se.printStackTrace();
+            } catch (IOException ie) {
+                ie.printStackTrace();
+            }
+        }
+    }
+
+    public void insertTXTinDB(String path) throws SQLException, IOException{
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        String line = br.readLine();
+        //고객등록
+        int number = Integer.parseInt(line.substring(1, line.length())); // 뭔가 텍스트로 저장하면 앞에 문자열이 있나봄
+        for (int i = 0; i < number; i++) {
+            line = br.readLine();
+            String[] words = line.split("\t");
+            String sqlStr = "INSERT INTO customers VALUES(?, ?, ?, ?)";
+            PreparedStatement stmt = database.prepareStatement(sqlStr);
+            stmt.setString(1, words[0]);
+            stmt.setString(2, words[1]);
+            stmt.setString(3, words[2]);
+            stmt.setString(4, words[3]);
+            stmt.executeQuery();
+            stmt.close();
+        }
+        line = br.readLine();
+        number = Integer.parseInt(line);
+        for (int i = 0; i < number; i++) {
+            line = br.readLine();
+            String[] words = line.split("\t");
+            String sqlStr = "INSERT INTO staff VALUES(?, ?, ?, ?)";
+            PreparedStatement stmt = database.prepareStatement(sqlStr);
+            stmt.setString(1, words[0]);
+            stmt.setString(2, words[1]);
+            stmt.setString(3, words[2]);
+            stmt.setString(4, words[3]);
+            stmt.executeQuery();
+            stmt.close();
+        }
+        line = br.readLine();
+        number = Integer.parseInt(line);
+        for (int i = 0; i < number; i++) {
+            line = br.readLine();
+            String[] words = line.split("\t");
+            String sqlStr = "INSERT INTO rooms VALUES(?, ?, ?)";
+            PreparedStatement stmt = database.prepareStatement(sqlStr);
+            stmt.setString(1, words[0]);
+            stmt.setString(2, words[1]);
+            stmt.setString(3, words[2]);
+            stmt.executeQuery();
+            stmt.close();
+        }
+        br.close();
+        printReserved();
+        try {
+            addRoomsToBOX(roomBox);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            addRoomsToBOX(roomPageBox);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void customerJoin() {
@@ -238,6 +358,7 @@ public class HotelManager implements ActionListener {
     public void staffJoin() {
         staffJoinFrame.setVisible(true);
     }
+
     public void custJoinInsert() throws SQLException{
         //custJoin판넬에서 받은 결과를 DB에 저장한다.
         String name = customerJoinNameInput.getText();
@@ -341,13 +462,13 @@ public class HotelManager implements ActionListener {
         stmt.close();
     }
 
-    public void addRoomsToBOX() throws SQLException{
+    public void addRoomsToBOX(JComboBox box) throws SQLException{
         String sqlStr = "SELECT room_number FROM rooms";
         PreparedStatement stmt = database.prepareStatement(sqlStr);
         ResultSet rs = stmt.executeQuery();
 
         while(rs.next()) {
-            roomBox.addItem(rs.getString("room_number"));
+            box.addItem(rs.getString("room_number"));
         }
 
         stmt.close();
@@ -370,26 +491,37 @@ public class HotelManager implements ActionListener {
         sqlStr = "SELECT count(*) count FROM reservation WHERE customer_name ='"+name+"'";
         stmt = database.prepareStatement(sqlStr);
         rs = stmt.executeQuery();
-        rs.next();
-        String countDay = rs.getString("count");
-        rs.next();
+        String countDay;
+        if (rs.next()) {
+            countDay = rs.getString("count");
+        } else {
+            countDay = "정보가 없습니다.";
+        }
         stmt.close();
         //최근 투숙일 받기, 분명 이런식으로 하는 것보다 더 좋은 방법이 있겠지만 시간과 지식이 부족함.
         sqlStr = "SELECT * FROM reservation WHERE customer_name ='"+name+"' order by day desc";
         stmt = database.prepareStatement(sqlStr);
         rs = stmt.executeQuery();
-        rs.next();
-        String lastDay = rs.getString("day");
-        rs.next();
+        String lastDay;
+        if (rs.next()) {
+            lastDay = rs.getString("day");
+        } else {
+            lastDay = "정보가 없습니다.";
+        }
         stmt.close();
         //최다직원 받기
         sqlStr = "SELECT staff_name, count(staff_name) FROM (select DISTINCT room_number, customer_name, staff_name, check_in from reservation) WHERE customer_name ='"+name+"' group by staff_name order by count(staff_name) desc";
         stmt = database.prepareStatement(sqlStr);
         rs = stmt.executeQuery();
-        rs.next();
-        String staffCount = rs.getString("count(staff_name)");
-        String staffname = rs.getString("staff_name");
-        rs.next();
+        String staffCount;
+        String staffname;
+        if (rs.next()) {
+            staffCount = rs.getString("count(staff_name)");
+            staffname = rs.getString("staff_name");
+        } else {
+            staffCount = "[정보 없음]";
+            staffname = "정보가 없습니다.";
+        }
         stmt.close();
         custSearchOut.setText("고객명: "+name+"\n성별: "+sex+
                 "\n주소: "+address+"\n연락처: "+phone +"\n총 투숙기간: "+
@@ -398,6 +530,58 @@ public class HotelManager implements ActionListener {
 
     public void searchRoom() throws SQLException{
         //방번호로 방을 조회한다.
+        String item = roomPageBox.getSelectedItem().toString();
+
+        String sqlStr = "SELECT * FROM rooms WHERE room_number = ?";
+        PreparedStatement stmt = database.prepareStatement(sqlStr);
+        stmt.setString(1, item);
+        ResultSet rs = stmt.executeQuery();
+        rs.next();
+        String capacity = rs.getString("capacity");
+        String type = rs.getString("type");
+        rs.next();
+
+        sqlStr = "SELECT * FROM reservation WHERE room_number = ? and day = to_date('"+to_now_date+"','YYYYMMDD')";
+        stmt = database.prepareStatement(sqlStr);
+        stmt.setString(1, item);
+        rs = stmt.executeQuery();
+        String now_avail;
+        if (rs.next()) {
+            now_avail = "투숙중";
+        } else {
+            now_avail = "비어있음";
+        }
+        //최다 투숙고객 찾기
+        sqlStr = "SELECT customer_name, count(customer_name) FROM (" +
+                "select DISTINCT room_number, customer_name, check_in from reservation)" +
+                "where room_number = ? group by customer_name order by count(customer_name) desc";
+        stmt = database.prepareStatement(sqlStr);
+        stmt.setString(1, item);
+        rs = stmt.executeQuery();
+        String cust_info;
+        if (rs.next()) {
+            cust_info = rs.getString("customer_name");
+            cust_info = cust_info + "(" + rs.getString("count(customer_name)")+"회)";
+        } else {
+            cust_info = "숙박한 사람이 없습니다.";
+        }
+        //최다 담당직원
+        sqlStr = "SELECT staff_name, count(staff_name) FROM (" +
+                "select DISTINCT room_number, staff_name, check_in from reservation)" +
+                "where room_number = ? group by staff_name order by count(staff_name) desc";
+        stmt = database.prepareStatement(sqlStr);
+        stmt.setString(1, item);
+        rs = stmt.executeQuery();
+        String staff_info;
+        if (rs.next()) {
+            staff_info = rs.getString("staff_name");
+            staff_info = staff_info + "(" + rs.getString("count(staff_name)")+"회)";
+        } else {
+            staff_info = "담당한 사람이 없습니다.";
+        }
+        roomSearchOut.setText("방번호: "+item+"\n수용인원: "+capacity+"\n타입: "+type+"\n상태: "+now_avail+
+        "\n투숙고객(최다): " + cust_info+"\n객신전담직원(최다): "+staff_info);
+        stmt.close();
     }
 
     public void searchSfaff() throws SQLException{
@@ -417,19 +601,30 @@ public class HotelManager implements ActionListener {
         sqlStr = "SELECT customer_name, count(customer_name) FROM (select DISTINCT room_number, customer_name, staff_name, check_in from reservation) WHERE staff_name ='"+name+"' group by customer_name order by count(customer_name) desc";
         stmt = database.prepareStatement(sqlStr);
         rs = stmt.executeQuery();
-        rs.next();
-        String cust_name = rs.getString("customer_name");
-        String cust_count = rs.getString("count(customer_name)");
-        rs.next();
+        String cust_name;
+        String cust_count;
+        if (rs.next()) {
+            cust_name = rs.getString("customer_name");
+            cust_count = rs.getString("count(customer_name)");
+        } else {
+            cust_name = "정보가 없습니다";
+            cust_count = "[정보없음]";
+        }
         stmt.close();
         //최다 객실 받기
         sqlStr = "SELECT room_number, count(room_number) FROM (select DISTINCT room_number, customer_name, staff_name, check_in from reservation) WHERE staff_name ='"+name+"' group by room_number order by count(room_number) desc";
         stmt = database.prepareStatement(sqlStr);
         rs = stmt.executeQuery();
-        rs.next();
-        String room_number = rs.getString("room_number");
-        String room_count = rs.getString("count(room_number)");
-        rs.next();
+        String room_number;
+        String room_count;
+        if (rs.next()) {
+            room_number = rs.getString("room_number");
+            room_count = rs.getString("count(room_number)");
+        } else {
+            room_number = "정보가 없습니다.";
+            room_count = "[정보없음]";
+        }
+
         stmt.close();
         staffSearchOut.setText("직원명: "+name+"\n성별: "+sex+
                 "\n주소: "+address+"\n연락처: "+phone +"\n접대고객(최다): "+
@@ -472,6 +667,12 @@ public class HotelManager implements ActionListener {
         } else if(e.getSource() == bookApply) {
             try {
                 bookInsert();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        } else if(e.getSource() == roomPageBox) {
+            try {
+                searchRoom();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
