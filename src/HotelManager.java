@@ -403,9 +403,29 @@ public class HotelManager implements ActionListener {
         String room_number = (String)roomBox.getSelectedItem();
         String staff_name;
 
-        String sqlStr = "SELECT name FROM staff";
+        //이미 예약 처리 (고객이)
+        String sqlStr = "SELECT * FROM reservation WHERE customer_name ='"+cust_name+"' and day BETWEEN to_date('"+checkIn +"','YYYYMMDD') and to_date('"+ String.valueOf(Integer.parseInt(checkIn) + Integer.parseInt(days) - 1) + "','YYYYMMDD')";
         PreparedStatement stmt = database.prepareStatement(sqlStr);
         ResultSet rs = stmt.executeQuery();
+
+        if(rs.next()) {
+            System.out.print("같은 기간에 이미 예약함");
+            return;
+        }
+
+        //이미 등록된 방일 때
+        sqlStr = "SELECT * FROM reservation WHERE room_number ="+room_number+" and day BETWEEN to_date('"+checkIn +"','YYYYMMDD') and to_date('"+ String.valueOf(Integer.parseInt(checkIn) + Integer.parseInt(days) - 1) + "','YYYYMMDD')";
+        stmt = database.prepareStatement(sqlStr);
+        rs = stmt.executeQuery();
+
+        if(rs.next()) {
+            System.out.print("이미 찬 방임");
+            return;
+        }
+
+        sqlStr = "SELECT name FROM staff";
+        stmt = database.prepareStatement(sqlStr);
+        rs = stmt.executeQuery();
         rs.next();
         staff_name = rs.getString("name");
         Random random = new Random();
