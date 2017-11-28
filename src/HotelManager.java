@@ -10,6 +10,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.*;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.Date;
 import java.util.Random;
@@ -106,162 +107,204 @@ public class HotelManager implements ActionListener {
     private SimpleDateFormat tonowdateFormat = new SimpleDateFormat("yyyyMMdd", Locale.KOREA);
     private String to_now_date = tonowdateFormat.format(date);
 
+    private JPanel mainPanel = new JPanel(null);
+
 
     public HotelManager() {
         //디비에 연결함. 및 등
         connectDB();
-        rowPanel.setLayout(new GridLayout(3, 1));
-        colPanel.setLayout(new GridLayout(1, 2));
+        //로그인창 구성하시오
 
-        bookPanel.setLayout(new GridLayout(5, 2));
-        bookPanel.setBorder(new TitledBorder("투숙 예약"));
-        nowPanel.setLayout(new GridLayout(4, 5));
-
-
-        nowPanel.setBorder(new TitledBorder("객실 예약 현황　　　　　　　　　　　　　　" + now_date));
-        joinPanel.setLayout(new GridLayout(1, 1));
-        joinPanel.setBorder(new TitledBorder("등록 및 조회"));
-
-        //menu
+        //menu구성
         menuBar.add(fileMenu);
         fileMenu.add(fileMenuItem);
         frame.setJMenuBar(menuBar);
 
-        //bookPanel
+        //최상단 제목 및 설명 구성
+        mainText.setFont(new Font("맑은 고딕", 1, 24));
+        mainText.setHorizontalAlignment(SwingConstants.CENTER);
+        mainText.setBorder(blackline);
+        JTextArea help = new JTextArea();
+        help.setEditable(false);
+        help.setText("###########꼭 읽어주세요###########\n" +
+                "1: 과제 명시 없는 부분 콘솔 SQL 에러 호출\n" +
+                "2: 텍스트 파일 유니코드 사용 바람(한글깨짐)\n" +
+                "3: 예약 변경 버튼 -> 자동으로 사이의 체크인이 같은 날자들 취소함\n" +
+                "4: 예약 취소 버튼 -> 체크인 날짜만 받아서 취소함");
+        mainText.setBounds(100, 30, 200, 50);
+        mainPanel.add(mainText);
+        help.setBounds(400, 0, 400, 100);
+        mainPanel.add(help);
+
+        //예약 패널
+        bookPanel.setLayout(null);
+        bookPanel.setBorder(new TitledBorder("투숙 예약"));
+        bookPanel.setBounds(20, 120, 350, 300);
+        mainPanel.add(bookPanel);
+
+        nameLabel.setBounds(40, 50, 50, 20);
         bookPanel.add(nameLabel);
+        nameField.setBounds(170, 50, 120, 20);
         bookPanel.add(nameField);
+        checkinLabel.setBounds(40,80,120,20);
         bookPanel.add(checkinLabel);
+        checkinField.setBounds(170,80,120,20);
         bookPanel.add(checkinField);
+        daysLabel.setBounds(40, 110, 120, 20);
         bookPanel.add(daysLabel);
+        daysBox.setBounds(170, 110, 120, 20);
         bookPanel.add(daysBox);
+        roomLabel.setBounds(40,140,50,20);
         bookPanel.add(roomLabel);
+        roomBox.setBounds(170,140,120,20);
         bookPanel.add(roomBox);
+        bookApply.setBounds(40,170,250,40);
         bookPanel.add(bookApply);
+        bookCancel.setBounds(40, 220, 250, 40);
+        bookCancel.addActionListener(this);
         bookPanel.add(bookCancel);
         bookApply.addActionListener(this);
-
-        //nowPanel
-        try {
-            printReserved();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        //콤보박스에 디비 받아서 룸들 더함.
-        try {
+        try { // DB에서 방들 불러와 룸박스에 저장
             addRoomsToBOX(roomBox);
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        //joinPanel
-        //joinPanel.add(joinPane);
-        //test 용으로 각종 엘레멘트 등록해봄.
-        JPanel custPage = new JPanel(new GridLayout(1, 2));
-        JPanel custInputPage = new JPanel(new GridLayout(2, 2));
+        //현재 패널
+        nowPanel.setLayout(null);
+        nowPanel.setBorder(new TitledBorder("객실 예약 현황(" + now_date + ")"));
+        nowPanel.setBounds(400, 120, 350, 300);
+        mainPanel.add(nowPanel);
+        try { // 패널에 방 현황을 프린트함
+            printReserved();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        //가입 조회 패널
+        joinPanel.setLayout(null);
+        joinPanel.setBorder(new TitledBorder("등록 및 조회"));
+        joinPanel.setBounds(20, 450, 730, 250);
+        mainPanel.add(joinPanel);
+
+
+        //고객 빠네
+        JPanel custPage = new JPanel(null);
+        joinPane.setBounds(20, 20, 690, 220);
         joinPanel.add(joinPane);
-        custInputPage.add(custSearchLabel);
-        custInputPage.add(custSearchInput);
-        custInputPage.add(custSearchButton);
+        custSearchLabel.setBounds(20, 50, 70, 30);
+        custPage.add(custSearchLabel);
+        custSearchInput.setBounds(90, 50, 120, 30);
+        custPage.add(custSearchInput);
+        custSearchButton.setBounds(20, 100, 90, 50);
+        custPage.add(custSearchButton);
         custSearchButton.addActionListener(this);
-        custInputPage.add(custJoin);
+        custJoin.setBounds(120, 100, 90, 50);
+        custPage.add(custJoin);
         custJoin.addActionListener(this);
-        custPage.add(custInputPage);
+        custSearchOut.setBounds(300, 20, 350, 150);
         custPage.add(custSearchOut);
         custSearchOut.setEditable(false);
 
-        //객실조회
+        //객실 빠네
         try {
             addRoomsToBOX(roomPageBox);
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        JPanel roomPage = new JPanel(new GridLayout(1, 2));
-        JPanel roomBoxPage = new JPanel(new GridLayout(2, 2));
+        JPanel roomPage = new JPanel(null);
         JLabel roomPageLabel = new JLabel("객실");
-        roomBoxPage.add(roomPageLabel);
-        roomBoxPage.add(roomPageBox);
+        roomPageLabel.setBounds(20, 50, 70, 30);
+        roomPage.add(roomPageLabel);
+        roomPage.add(roomPageBox);
+        roomPageBox.setBounds(90, 50, 120, 30);
         roomPageBox.addActionListener(this);
-        roomPage.add(roomBoxPage);
+        roomSearchOut.setBounds(300, 20, 350, 150);
         roomSearchOut.setEditable(false);
         roomPage.add(roomSearchOut);
 
-
-        JPanel staffPage = new JPanel(new GridLayout(1, 2));
-        JPanel staffInputPage = new JPanel(new GridLayout(2, 2));
-        staffInputPage.add(staffSearchLabel);
-        staffInputPage.add(staffSearchInput);
-        staffInputPage.add(staffSearchButton);
+        //직원 빠네
+        JPanel staffPage = new JPanel(null);
+        staffSearchLabel.setBounds(20, 50, 70, 30);
+        staffPage.add(staffSearchLabel);
+        staffSearchInput.setBounds(90, 50, 120, 30);
+        staffPage.add(staffSearchInput);
+        staffSearchButton.setBounds(20, 100, 90, 50);
+        staffPage.add(staffSearchButton);
         staffSearchButton.addActionListener(this);
-        staffInputPage.add(staffJoin);
+        staffJoin.setBounds(120, 100, 90, 50);
+        staffPage.add(staffJoin);
         staffJoin.addActionListener(this);
-        staffPage.add(staffInputPage);
         staffPage.add(staffSearchOut);
+        staffSearchOut.setBounds(300, 20, 350, 150);
         staffSearchOut.setEditable(false);
 
         joinPane.add("고객",custPage);
         joinPane.add("객실", roomPage);
         joinPane.add("직원",staffPage);
 
-
-
-
-        JPanel mainTextPanel = new JPanel(new GridLayout(2, 1));
-        mainText.setFont(new Font("맑은 고딕", 1, 24));
-        mainText.setHorizontalAlignment(SwingConstants.CENTER);
-        JTextArea help = new JTextArea();
-        help.setEditable(false);
-        help.setText("설명:\n과제 스펙 이외에 예외사항은 별도 예외처리안함.\n" +
-                "텍스트 파일은 유니코드인 걸 사용하시오.(한글전용 인코딩 X)");
-        mainTextPanel.add(mainText);
-        mainTextPanel.add(help);
-        rowPanel.add(mainTextPanel);
-        rowPanel.add(colPanel);
-        rowPanel.add(joinPanel);
-        colPanel.add(bookPanel);
-        colPanel.add(nowPanel);
-
-        frame.add(rowPanel);
+        frame.add(mainPanel);
 
         frame.setSize(800, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
-        customerJoinPanel.setLayout(new GridLayout(5, 2));
+        customerJoinPanel.setLayout(null);
+        customerJoinNameLabel.setBounds(40, 30, 70, 30);
         customerJoinPanel.add(customerJoinNameLabel);
+        customerJoinNameInput.setBounds(120,30,120,30);
         customerJoinPanel.add(customerJoinNameInput);
+        customerJoinSexLabel.setBounds(40, 70, 70, 30);
         customerJoinPanel.add(customerJoinSexLabel);
+        customerJoinSexBox.setBounds(120,70,120,30);
         customerJoinPanel.add(customerJoinSexBox);
+        customerJoinAddressLabel.setBounds(40, 110, 70, 30);
         customerJoinPanel.add(customerJoinAddressLabel);
+        customerJoinAddressBox.setBounds(120,110,120,30);
         customerJoinPanel.add(customerJoinAddressBox);
+        customerJoinPhoneLabel.setBounds(40, 150, 70, 30);
         customerJoinPanel.add(customerJoinPhoneLabel);
+        customerJoinPhoneInput.setBounds(120,150,120,30);
         customerJoinPanel.add(customerJoinPhoneInput);
+        customerJoinJoinButton.setBounds(40, 190, 90, 50);
         customerJoinPanel.add(customerJoinJoinButton);
+        customerJoinCancelButton.setBounds(150, 190, 90, 50);
         customerJoinPanel.add(customerJoinCancelButton);
         customerJoinCancelButton.addActionListener(this);
         customerJoinJoinButton.addActionListener(this);
 
         customerJoinFrame.add(customerJoinPanel);
-        customerJoinFrame.setSize(300,400);
+        customerJoinFrame.setSize(300,320);
         customerJoinFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         //staff
-        staffJoinPanel.setLayout(new GridLayout(5, 2));
+        staffJoinPanel.setLayout(null);
+        staffJoinNameLabel.setBounds(40, 30, 70, 30);
         staffJoinPanel.add(staffJoinNameLabel);
+        staffJoinNameInput.setBounds(120,30,120,30);
         staffJoinPanel.add(staffJoinNameInput);
+        staffJoinSexLabel.setBounds(40, 70, 70, 30);
         staffJoinPanel.add(staffJoinSexLabel);
+        staffJoinSexBox.setBounds(120,70,120,30);
         staffJoinPanel.add(staffJoinSexBox);
+        staffJoinAddressLabel.setBounds(40, 110, 70, 30);
         staffJoinPanel.add(staffJoinAddressLabel);
+        staffJoinAddressBox.setBounds(120,110,120,30);
         staffJoinPanel.add(staffJoinAddressBox);
+        staffJoinPhoneLabel.setBounds(40, 150, 70, 30);
         staffJoinPanel.add(staffJoinPhoneLabel);
+        staffJoinPhoneInput.setBounds(120,150,120,30);
         staffJoinPanel.add(staffJoinPhoneInput);
+        staffJoinJoinButton.setBounds(40, 190, 90, 50);
         staffJoinPanel.add(staffJoinJoinButton);
+        staffJoinCancelButton.setBounds(150, 190, 90, 50);
         staffJoinPanel.add(staffJoinCancelButton);
         staffJoinJoinButton.addActionListener(this);
         staffJoinCancelButton.addActionListener(this);
         fileMenuItem.addActionListener(new FileOpen());
 
         staffJoinFrame.add(staffJoinPanel);
-        staffJoinFrame.setSize(300,400);
+        staffJoinFrame.setSize(300,320);
         staffJoinFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
     class FileOpen implements ActionListener {
@@ -395,6 +438,20 @@ public class HotelManager implements ActionListener {
         staffJoinFrame.setVisible(false);
     }
 
+    public void bookCancel() throws SQLException{
+        String cust_name = nameField.getText();
+        String checkIn = checkinField.getText();
+        String sqlStr = "DELETE FROM reservation WHERE customer_name ='" + cust_name + "' and check_in = to_date('" +checkIn + "','YYYYMMDD')";
+        PreparedStatement stmt = database.prepareStatement(sqlStr);
+        stmt.executeQuery();
+        System.out.println("기등록 예약 취소 완료입니다.");
+        nowPanel.removeAll();
+        nowPanel.revalidate();
+
+        printReserved();
+
+        nowPanel.repaint();
+    }
     public void bookInsert() throws SQLException{
         //예약 결과를 등록한다.
         String cust_name = nameField.getText();
@@ -402,26 +459,31 @@ public class HotelManager implements ActionListener {
         String days = (String)daysBox.getSelectedItem();
         String room_number = (String)roomBox.getSelectedItem();
         String staff_name;
-
-        //이미 예약 처리 (고객이)
-        String sqlStr = "SELECT * FROM reservation WHERE customer_name ='"+cust_name+"' and day BETWEEN to_date('"+checkIn +"','YYYYMMDD') and to_date('"+ String.valueOf(Integer.parseInt(checkIn) + Integer.parseInt(days) - 1) + "','YYYYMMDD')";
-        PreparedStatement stmt = database.prepareStatement(sqlStr);
-        ResultSet rs = stmt.executeQuery();
-
-        if(rs.next()) {
-            System.out.print("같은 기간에 이미 예약함");
-            return;
-        }
+        ResultSet rs;
 
         //이미 등록된 방일 때
-        sqlStr = "SELECT * FROM reservation WHERE room_number ="+room_number+" and day BETWEEN to_date('"+checkIn +"','YYYYMMDD') and to_date('"+ String.valueOf(Integer.parseInt(checkIn) + Integer.parseInt(days) - 1) + "','YYYYMMDD')";
-        stmt = database.prepareStatement(sqlStr);
+        String sqlStr = "SELECT * FROM reservation WHERE room_number ="+room_number+" and day BETWEEN to_date('"+checkIn +"','YYYYMMDD') and to_date('"+ checkIn + "','YYYYMMDD') +"+String.valueOf(Integer.parseInt(days) - 1);
+        PreparedStatement stmt = database.prepareStatement(sqlStr);
         rs = stmt.executeQuery();
 
         if(rs.next()) {
-            System.out.print("이미 찬 방임");
+            System.out.println("이미 찬 방이기 때문에 예약이 중지됩니다.");
             return;
         }
+
+        //이미 예약 처리 (고객이)
+        sqlStr = "SELECT DISTINCT check_in FROM reservation WHERE customer_name ='" + cust_name + "' and day BETWEEN to_date('" + checkIn + "','YYYYMMDD') and to_date('" + checkIn + "','YYYYMMDD') + "+days+" - 1";
+         stmt = database.prepareStatement(sqlStr);
+        rs = stmt.executeQuery();
+        while(rs.next()) {
+            String check_in = rs.getString("check_in");
+            String[] check_ins = check_in.split(" ");
+            System.out.print(check_ins[0]);
+            sqlStr = "DELETE FROM reservation WHERE customer_name ='" + cust_name + "' and check_in = '"+check_ins[0]+"'";
+            stmt = database.prepareStatement(sqlStr);
+            stmt.executeQuery();
+            System.out.println("기등록된 예약이 있어서 취소했습니다.");
+        };
 
         sqlStr = "SELECT name FROM staff";
         stmt = database.prepareStatement(sqlStr);
@@ -437,23 +499,27 @@ public class HotelManager implements ActionListener {
         for (int i = 0; i < Integer.parseInt(days); i++) {
             sqlStr = "INSERT INTO reservation VALUES (" + room_number + ",'" +
                     cust_name + "','" + staff_name + "',to_date('" +
-                    String.valueOf(Integer.parseInt(checkIn) + i) +"','YYYYMMDD'),to_date('"  +
-                    checkIn + "','YYYYMMDD'))";
+                    checkIn +"','YYYYMMDD')+"+String.valueOf(i)+",to_date('"  +
+                    checkIn + "','YYYYMMDD')) ";
             stmt = database.prepareStatement(sqlStr);
             stmt.executeQuery();
         }
-
         stmt.close();
 
+        nowPanel.removeAll();
+        nowPanel.revalidate();
+
         printReserved();
+
+        nowPanel.repaint();
+
+        System.out.println("성공적으로 예약했습니다.");
     }
 
     public void printReserved() throws SQLException{
         //예약현황을 프린트한다.
         JLabel[] rooms;
         rooms = new JLabel[20];
-        nowPanel.removeAll();
-        nowPanel.revalidate();
 
         String insqlStr;
         PreparedStatement instmt;
@@ -473,9 +539,14 @@ public class HotelManager implements ActionListener {
             inrs = instmt.executeQuery();
             if (inrs.next()) {
                 rooms[i].setForeground(Color.red);
+                rooms[i].setBackground(Color.yellow);
+                rooms[i].setOpaque(true);
             }
 
             rooms[i].setBorder(blackline);
+            int yLocate = i / 5;
+            int xLocate = i % 5;
+            rooms[i].setBounds(10+ xLocate*65, 40 + yLocate*60, 60, 50);
             nowPanel.add(rooms[i]);
             i++;
         }
@@ -693,6 +764,12 @@ public class HotelManager implements ActionListener {
         } else if(e.getSource() == roomPageBox) {
             try {
                 searchRoom();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        } else if(e.getSource() == bookCancel) {
+            try {
+                bookCancel();
             } catch (SQLException se) {
                 se.printStackTrace();
             }
