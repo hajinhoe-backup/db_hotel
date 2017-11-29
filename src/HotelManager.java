@@ -17,8 +17,6 @@ import java.util.Random;
 
 public class HotelManager implements ActionListener {
     private static Connection database;
-    private String db_id = "database";
-    private String db_pw = "database";
 
     // GUI 원소들을 정의함.
     private JFrame frame = new JFrame();
@@ -111,10 +109,12 @@ public class HotelManager implements ActionListener {
 
 
     public HotelManager() {
-        //디비에 연결함. 및 등
-        connectDB();
-        //로그인창 구성하시오
 
+        //디비에 연결함. 및 등
+        new Login_DB();
+
+    }
+    public void setLayout() {
         //menu구성
         menuBar.add(fileMenu);
         fileMenu.add(fileMenuItem);
@@ -306,6 +306,53 @@ public class HotelManager implements ActionListener {
         staffJoinFrame.add(staffJoinPanel);
         staffJoinFrame.setSize(300,320);
         staffJoinFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }
+    class Login_DB implements ActionListener {
+        private JFrame frame = new JFrame();
+        private JPanel panel = new JPanel();
+
+        private JLabel welcome = new JLabel("☆☆☆☆☆이용을 환영합니다☆☆☆☆☆");
+        private JLabel idLabel = new JLabel("아이디");
+        private JLabel pwdLabel = new JLabel("비밀번호");
+        private JTextField idInput = new JTextField();
+        private JPasswordField pwdInput = new JPasswordField();
+        private JButton loginButton = new JButton("로그인");
+        private String username;
+        private String password;
+
+        public Login_DB(){
+            panel.setLayout(null);
+            welcome.setBounds(20,5,300,30);
+            idLabel.setBounds(20, 40, 60, 30);
+            pwdLabel.setBounds(20, 80, 60, 30);
+            idInput.setBounds(100, 40, 80, 30);
+            pwdInput.setBounds(100, 80, 80, 30);
+            loginButton.setBounds(200, 60, 80, 35);
+            loginButton.addActionListener(this);
+            panel.add(welcome);
+            panel.add(idLabel);
+            panel.add(pwdLabel);
+            panel.add(idInput);
+            panel.add(pwdInput);
+            panel.add(loginButton);
+
+            frame.add(panel);
+
+            frame.setTitle("JDBC Practice 1");
+            frame.setSize(320, 180);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setVisible(true);
+        }
+
+        public void actionPerformed(ActionEvent e) {
+            if(e.getSource() == loginButton) {
+                username = idInput.getText();
+                password = new String(pwdInput.getPassword());
+                connectDB(username, password);
+                frame.setVisible(false);
+                setLayout();
+            }
+        }
     }
     class FileOpen implements ActionListener {
         JFileChooser chooser;
@@ -776,7 +823,7 @@ public class HotelManager implements ActionListener {
         }
     }
 
-    public void connectDB() {
+    public void connectDB(String db_id, String db_pw) {
         try {
             Class.forName("oracle.jdbc.OracleDriver");
             database = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:XE", db_id, db_pw);
